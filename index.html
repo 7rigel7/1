@@ -1,0 +1,2116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Let me hear your sound</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style id="default-styles">
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        body {
+            background: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100dvh;
+            margin: 0;
+            padding: 0;
+        }
+        .player {
+            width: 100%;
+            max-width: 440px;
+            height: 100dvh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            color: #e0e0e0;
+            overflow: hidden;
+            background-color: #0a0a0a;
+        }
+        .ambient-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            transition: background 0.3s ease;
+            pointer-events: none;
+        }
+        .content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            backdrop-filter: blur(8px);
+        }
+        .music-title {
+            text-align: center;
+            font-size: 16px;
+            font-weight: 400;
+            letter-spacing: 2px;
+            color: #ccc;
+            padding: 28px 0 8px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+        .avatar-pair {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 14px;
+            margin: 0 0 10px 0;
+            flex-shrink: 0;
+        }
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .chat-bubbles {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 20px;
+            margin: 0 20px 10px;
+            flex-shrink: 0;
+        }
+        .bubble-left, .bubble-right {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 45%;
+        }
+        .bubble {
+            background: rgba(30, 30, 30, 0.7);
+            backdrop-filter: blur(8px);
+            border-radius: 20px;
+            padding: 8px 18px;
+            font-size: 13px;
+            color: #f0f0f0;
+            word-break: break-word;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            line-height: 1.45;
+            text-align: center;
+            max-width: 100%;
+            border: none;
+        }
+        .typing-indicator {
+            font-size: 10px;
+            color: #aaa;
+            margin-top: 4px;
+            font-style: italic;
+            display: none;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+        .record-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex: 1;
+            margin-top: -20px;
+            cursor: pointer;
+            min-height: 0;
+        }
+        .record {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #222, #080808);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: spin 18s linear infinite;
+            animation-play-state: running;
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.1), 
+                        0 0 30px rgba(255,255,255,0.2),
+                        0 0 60px rgba(0,0,0,0.6),
+                        inset 0 0 30px rgba(0,0,0,0.8),
+                        inset 0 0 10px rgba(0,0,0,0.9);
+            position: relative;
+        }
+        .record::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: repeating-radial-gradient(circle at 50% 50%, 
+                rgba(255,255,255,0.02) 0px, 
+                rgba(255,255,255,0.02) 2px,
+                rgba(0,0,0,0.2) 3px,
+                rgba(0,0,0,0.2) 5px);
+            opacity: 0.6;
+            pointer-events: none;
+            -webkit-mask: radial-gradient(circle, transparent 100px, black 100px);
+            mask: radial-gradient(circle, transparent 100px, black 100px);
+        }
+        .album-cover {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background-image: url('https://i.postimg.cc/yx08SzP6/IMG-20260204-142411.jpg');
+            background-size: cover;
+            background-position: center;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
+            border: none;
+        }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+        .chat-history-full {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            background: transparent;
+            margin: 0 20px 10px;
+            padding: 4px 4px;
+            flex-direction: column;
+            gap: 0;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .chat-history-full::-webkit-scrollbar { display: none; }
+        .history-line {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 0;
+        }
+        .history-text {
+            display: inline-block;
+            padding: 0 12px;
+            font-size: 13pt;
+            line-height: 18pt;
+            max-width: 85%;
+            word-break: break-word;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            text-align: center;
+            /* 颜色由CSS变量动态设置 */
+        }
+        .history-line[data-sender="我"] .history-text { 
+            color: var(--my-message-color, #aaa); 
+            font-weight: 450; 
+        }
+        .history-line[data-sender="对方"] .history-text { 
+            color: var(--opponent-message-color, #ddd); 
+        }
+        .history-time {
+            font-size: 8px;
+            color: #888;
+            margin-top: 0px;
+            align-self: flex-end;
+            padding-right: 16px;
+            line-height: 12px;
+        }
+        .date-separator {
+            text-align: center;
+            font-size: 9px;
+            color: #777;
+            margin: 4px 0;
+            letter-spacing: 1px;
+            font-weight: 300;
+            width: 100%;
+            border-bottom: 0.5px dashed #555;
+            line-height: 0.1em;
+        }
+        .date-separator span {
+            background: transparent;
+            padding: 0 10px;
+        }
+        .action-row {
+            display: flex;
+            justify-content: space-evenly;
+            padding: 8px 12px 0;
+            color: #ddd;
+            flex-shrink: 0;
+            font-size: 24px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+        }
+        .action-icon {
+            font-size: 26px;
+            cursor: pointer;
+            transition: transform 0.1s;
+            color: #eee;
+        }
+        .action-icon:hover { transform: scale(1.1); }
+        .play-controls {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 22px 18px;
+            font-size: 30px;
+            color: #eee;
+            flex-shrink: 0;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.7);
+        }
+        .play-controls i { 
+            cursor: pointer; 
+            transition: transform 0.1s;
+            color: #eee;
+        }
+        .play-controls i:hover { transform: scale(1.1); }
+        .progress-wrapper {
+            padding: 6px 20px 0;
+            flex-shrink: 0;
+        }
+        .progress-area { width: 100%; }
+        input[type=range] {
+            width: 100%;
+            height: 4px;
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            outline: none;
+            box-shadow: 0 0 6px rgba(255,255,255,0.2);
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: white;
+            box-shadow: 0 0 10px white, 0 0 20px rgba(255,255,255,0.5);
+            cursor: pointer;
+            border: none;
+        }
+        input[type=range]::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: white;
+            box-shadow: 0 0 10px white, 0 0 20px rgba(255,255,255,0.5);
+            cursor: pointer;
+            border: none;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            height: 4px;
+            background: linear-gradient(to right, rgba(255,255,255,0.6), rgba(255,255,255,0.3));
+            border-radius: 4px;
+        }
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 2px 0;
+            font-size: 11px;
+            color: #aaa;
+            letter-spacing: 0.5px;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center;
+            align-items: flex-start;
+            z-index: 2000;
+            backdrop-filter: blur(10px);
+        }
+        .status-card {
+            width: 360px;
+            max-width: 90%;
+            backdrop-filter: blur(20px);
+            border-radius: 28px;
+            padding: 52px 24px 30px;
+            margin-top: 18dvh;
+            border: none;
+            box-shadow: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: background 0.3s ease;
+        }
+        .status-avatar-group {
+            display: flex;
+            justify-content: center;
+            gap: 52px;
+            margin-top: -70px;
+            margin-bottom: 18px;
+        }
+        .status-avatar-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .status-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            object-fit: cover;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.3);
+        }
+        .status-text-only {
+            font-size: 15px;
+            color: #ddd;
+            margin-top: 12px;
+            background: transparent;
+            backdrop-filter: none;
+            padding: 0;
+            border: none;
+            cursor: pointer;
+            font-weight: 400;
+        }
+        .divider {
+            width: 70%;
+            height: 1px;
+            background: rgba(255,255,255,0.2);
+            margin: 8px 0 26px;
+            box-shadow: none;
+        }
+        .distance-custom {
+            text-align: center;
+            font-size: 17px;
+            color: #ccc;
+            cursor: pointer;
+            background: transparent;
+            backdrop-filter: none;
+            padding: 0;
+            border: none;
+            width: fit-content;
+            margin: 0 auto;
+            font-weight: 400;
+        }
+        .settings-menu-card {
+            width: 340px;
+            max-width: 90%;
+            background: rgba(30, 30, 30, 0.4);
+            backdrop-filter: blur(20px);
+            border-radius: 28px;
+            padding: 24px 20px;
+            border: none;
+            box-shadow: none;
+            margin-top: 8dvh;
+        }
+        .settings-menu-item {
+            font-size: 20px;
+            padding: 18px 12px;
+            border-bottom: 0.5px solid rgba(255,255,255,0.1);
+            color: #ddd;
+            cursor: pointer;
+        }
+        .sub-settings-card {
+            width: 340px;
+            max-width: 90%;
+            background: rgba(30, 30, 30, 0.4);
+            backdrop-filter: blur(20px);
+            border-radius: 28px;
+            padding: 28px 22px;
+            margin-top: 5dvh;
+            max-height: 70dvh;
+            overflow-y: auto;
+            border: none;
+            box-shadow: none;
+        }
+        .sub-settings-card h3 {
+            font-size: 20px;
+            font-weight: 400;
+            color: #ddd;
+            margin-bottom: 16px;
+            border-left: 4px solid rgba(255,255,255,0.3);
+            padding-left: 16px;
+        }
+        .back-btn {
+            margin-bottom: 20px;
+            display: inline-block;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(8px);
+            padding: 8px 22px;
+            border-radius: 50px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            color: #ddd;
+        }
+        .settings-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 0.5px solid rgba(255,255,255,0.1);
+            flex-wrap: wrap;
+            color: #ccc;
+        }
+        .file-upload-label {
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(4px);
+            padding: 5px 14px;
+            border-radius: 30px;
+            font-size: 12px;
+            cursor: pointer;
+            border: none;
+            color: #ddd;
+        }
+        .corpus-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        .corpus-table td {
+            padding: 8px 6px;
+            border-bottom: 0.5px dashed #444;
+            font-size: 14px;
+            color: #bbb;
+        }
+        .corpus-table .remove-cell {
+            text-align: right;
+            color: #999;
+            cursor: pointer;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 20px;
+            font-size: 15px;
+        }
+        .pagination span {
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(4px);
+            padding: 6px 16px;
+            border-radius: 50px;
+            cursor: pointer;
+            border: none;
+            color: #ccc;
+        }
+        .bottom-chat-card {
+            width: 100%;
+            max-width: 440px;
+            background: rgba(20, 20, 20, 0.7);
+            backdrop-filter: blur(20px);
+            border-radius: 28px 28px 0 0;
+            padding: 18px 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: 440px;
+            z-index: 2100;
+            border-top: none;
+        }
+        .bottom-chat-card input {
+            flex: 1;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(4px);
+            border: none;
+            border-radius: 28px;
+            padding: 16px 22px;
+            font-size: 15px;
+            color: #eee;
+            outline: none;
+            border: none;
+        }
+        .bottom-chat-card button {
+            background: rgba(80,80,80,0.6);
+            backdrop-filter: blur(4px);
+            border: none;
+            border-radius: 28px;
+            padding: 14px 28px;
+            color: white;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            border: none;
+        }
+        .tarot-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+            justify-content: center;
+        }
+        .tarot-card {
+            width: 70px;
+            height: 100px;
+            background: rgba(40,40,40,0.7);
+            backdrop-filter: blur(4px);
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            color: #ddd;
+            cursor: pointer;
+            transition: background 0.15s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            text-align: center;
+            padding: 4px;
+            word-break: break-word;
+            border: none;
+        }
+        .tarot-card.flipped {
+            background: rgba(60,60,60,0.8);
+            color: #fff;
+        }
+        .playlist-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 10px;
+            border-bottom: 0.5px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            color: #ccc;
+        }
+        .delete-song {
+            color: #999;
+            margin-left: 12px;
+            cursor: pointer;
+        }
+        .import-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 16px 0;
+        }
+        .import-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .import-row input {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(4px);
+            border: none;
+            border-radius: 50px;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: #eee;
+        }
+        .import-row button {
+            background: rgba(80,80,80,0.5);
+            backdrop-filter: blur(4px);
+            border: none;
+            border-radius: 50px;
+            padding: 10px 20px;
+            white-space: nowrap;
+            cursor: pointer;
+            color: white;
+            border: none;
+        }
+        @keyframes coinFlip { 0% { transform: rotateY(0); } 100% { transform: rotateY(360deg); } }
+        .coin-spin { animation: coinFlip 0.5s ease; }
+        .hidden { display: none; }
+    </style>
+    <style id="user-css"></style>
+    <style id="custom-font-style"></style>
+    <audio id="audio-player" preload="auto"></audio>
+</head>
+<body>
+    <div class="player">
+        <div class="ambient-bg" id="ambientBg" style="background-color:#1a1a1a;"></div>
+        <div class="content">
+            <div class="music-title" id="musicTitle">autumn leaves · bill evans</div>
+            <div class="avatar-pair">
+                <img src="https://i.postimg.cc/QCcdWrbs/IMG-20260208-234658.jpg" class="avatar" id="avatarLeft" alt="TA">
+                <img src="https://i.postimg.cc/QCcdWrbs/IMG-20260208-234658.jpg" class="avatar" id="avatarRight" alt="我">
+            </div>
+            <div class="chat-bubbles" id="bubbleContainer">
+                <div class="bubble-left">
+                    <div class="bubble" id="latestOpponentMsg">&nbsp;</div>
+                    <span id="typingIndicator" class="typing-indicator">正在输入...</span>
+                </div>
+                <div class="bubble-right">
+                    <div class="bubble" id="latestMyMsg">&nbsp;</div>
+                </div>
+            </div>
+            <div id="recordContainer" class="record-section">
+                <div class="record" id="recordDisc">
+                    <div class="album-cover" id="albumCover" style="background-image: url('https://i.postimg.cc/yx08SzP6/IMG-20260204-142411.jpg');"></div>
+                </div>
+            </div>
+            <div id="historyFullView" class="chat-history-full"></div>
+            <div class="action-row">
+                <i class="fas fa-heart action-icon" id="companionBtn"></i>
+                <i class="fas fa-comment-dots action-icon" id="chatBtn"></i>
+                <i class="fas fa-bars action-icon" id="settingsBtn"></i>
+            </div>
+            <div class="progress-wrapper">
+                <div class="progress-area">
+                    <input type="range" id="progressSlider" value="0" max="100">
+                </div>
+                <div class="time-display">
+                    <span id="currentTime">0:00</span>
+                    <span id="totalTime">0:00</span>
+                </div>
+            </div>
+            <div class="play-controls">
+                <i class="fas fa-random" id="playModeIcon"></i>
+                <i class="fas fa-backward-step" id="prevTrackBtn"></i>
+                <i class="fas fa-play-circle" id="playPauseBtn"></i>
+                <i class="fas fa-forward-step" id="nextTrackBtn"></i>
+                <i class="fas fa-list-ul" id="playlistIcon"></i>
+            </div>
+        </div>
+    </div>
+    <div id="modalOverlay" class="modal-overlay"></div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // ---------- 常量 ----------
+            const DEFAULT_COVER = 'https://i.postimg.cc/yx08SzP6/IMG-20260204-142411.jpg';
+            const DEFAULT_AVATAR = 'https://i.postimg.cc/QCcdWrbs/IMG-20260208-234658.jpg';
+
+            // ---------- 状态 ----------
+            let taNickname = 'TA';
+            let myStatus = '🍵 喝茶';
+            let opponentStatus = ['☕️ 喝咖啡', '📚 阅读', '🎹 练琴', '🚶 散步', '🌧 听雨', '😴 小憩'][Math.floor(Math.random() * 6)];
+            let distanceText = '相距 1,284km · 一起听 3h';
+            let memorialDay = '2026-02-11'; // 新增纪念日变量
+            let chatHistory = [];
+            let lastOpponentMsg = '', lastMyMsg = '';
+            let replyCorpus = ['这版编曲真妙', '我也想学钢琴了', '雨天听绝配', '循环停不下来', '你最近歌品味很好', '爵士和弦好舒服', '专辑封面也美', '我标记了红心'];
+            let statusCorpus = ['☕️ 喝咖啡', '📚 阅读', '🎹 练琴', '🚶 散步', '🌧 听雨', '😴 小憩'];
+            let replyMin = 1, replyMax = 3, delayMin = 2, delayMax = 6;
+            let isRandomMode = true;
+            let currentTrackIndex = 0;
+            let playlist = [
+                { title: 'autumn leaves · bill evans', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
+                { title: 'blue in green · miles', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
+                { title: 'my funny valentine · chet', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
+                { title: 'so what · coltrane', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' }
+            ];
+            let coinFrontImg = null, coinBackImg = null;
+            let currentBgColor = '#1a1a1a';
+
+            // ---------- 塔罗牌名 (78张完整) ----------
+            const tarotNames = [
+                "愚者","魔术师","女祭司","女皇","皇帝","教皇","恋人","战车","力量","隐士","命运之轮","正义","倒吊人","死神","节制","恶魔","塔","星星","月亮","太阳","审判","世界",
+                "权杖一","权杖二","权杖三","权杖四","权杖五","权杖六","权杖七","权杖八","权杖九","权杖十","权杖侍从","权杖骑士","权杖皇后","权杖国王",
+                "圣杯一","圣杯二","圣杯三","圣杯四","圣杯五","圣杯六","圣杯七","圣杯八","圣杯九","圣杯十","圣杯侍从","圣杯骑士","圣杯皇后","圣杯国王",
+                "宝剑一","宝剑二","宝剑三","宝剑四","宝剑五","宝剑六","宝剑七","宝剑八","宝剑九","宝剑十","宝剑侍从","宝剑骑士","宝剑皇后","宝剑国王",
+                "星币一","星币二","星币三","星币四","星币五","星币六","星币七","星币八","星币九","星币十","星币侍从","星币骑士","星币皇后","星币国王"
+            ];
+
+            // ---------- DOM 元素 ----------
+            const overlay = document.getElementById('modalOverlay');
+            const ambientBg = document.getElementById('ambientBg');
+            const opponentBubble = document.getElementById('latestOpponentMsg');
+            const myBubble = document.getElementById('latestMyMsg');
+            const typingEl = document.getElementById('typingIndicator');
+            const recordDiv = document.getElementById('recordContainer');
+            const recordDisc = document.getElementById('recordDisc');
+            const historyDiv = document.getElementById('historyFullView');
+            const bubbleContainer = document.getElementById('bubbleContainer');
+            const musicTitle = document.getElementById('musicTitle');
+            const albumCover = document.getElementById('albumCover');
+            const playModeIcon = document.getElementById('playModeIcon');
+            const prevBtn = document.getElementById('prevTrackBtn');
+            const nextBtn = document.getElementById('nextTrackBtn');
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            const progressSlider = document.getElementById('progressSlider');
+            const currentTimeSpan = document.getElementById('currentTime');
+            const totalTimeSpan = document.getElementById('totalTime');
+            const audioPlayer = document.getElementById('audio-player');
+            const fontStyle = document.getElementById('custom-font-style');
+            const userStyle = document.getElementById('user-css');
+
+            // 播放状态
+            let isPlaying = false;
+            recordDisc.style.animationPlayState = 'paused';
+            playPauseBtn.className = 'fas fa-play-circle';
+
+            // ---------- 工具函数 ----------
+            function formatTime(seconds) {
+                if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            // ---------- RGB 转 HSL ----------
+            function rgbToHsl(r, g, b) {
+                r /= 255, g /= 255, b /= 255;
+                const max = Math.max(r, g, b), min = Math.min(r, g, b);
+                let h, s, l = (max + min) / 2;
+                if (max === min) {
+                    h = s = 0;
+                } else {
+                    const d = max - min;
+                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    switch (max) {
+                        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                        case g: h = (b - r) / d + 2; break;
+                        case b: h = (r - g) / d + 4; break;
+                    }
+                    h /= 6;
+                }
+                return [h * 360, s, l];
+            }
+
+            // ---------- 根据背景色动态计算消息颜色 ----------
+            function updateMessageColorsFromBg(rgbColor) {
+                if (!rgbColor || !rgbColor.startsWith('rgb')) return;
+                const match = rgbColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+                if (!match) return;
+                const r = parseInt(match[1]), g = parseInt(match[2]), b = parseInt(match[3]);
+                const [h, s, l] = rgbToHsl(r, g, b);
+                // 判断背景深浅
+                const isDark = l < 0.5;
+                // 我方颜色：饱和度较高，明度根据背景调整
+                const myS = 0.7; // 70%
+                const myL = isDark ? 0.9 : 0.2; // 深背景亮色，浅背景暗色
+                // 对方颜色：饱和度较低
+                const oppS = 0.4; // 40%
+                const oppL = isDark ? 0.7 : 0.4;
+                // 转换为CSS颜色字符串
+                const myColor = `hsl(${h}, ${myS * 100}%, ${myL * 100}%)`;
+                const oppColor = `hsl(${h}, ${oppS * 100}%, ${oppL * 100}%)`;
+                // 设置CSS变量
+                document.documentElement.style.setProperty('--my-message-color', myColor);
+                document.documentElement.style.setProperty('--opponent-message-color', oppColor);
+            }
+
+            // ---------- 跨域主色提取 ----------
+            async function getDominantColor(imgUrl) {
+                if (imgUrl.startsWith('blob:')) {
+                    return extractColorFromBlobUrl(imgUrl);
+                }
+                try {
+                    const response = await fetch(imgUrl, { mode: 'cors' });
+                    if (!response.ok) throw new Error('fetch failed');
+                    const blob = await response.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    const color = await extractColorFromBlobUrl(blobUrl);
+                    URL.revokeObjectURL(blobUrl);
+                    return color;
+                } catch (e) {
+                    console.warn('跨域图片加载失败，使用默认色', e);
+                    return '#1a1a1a';
+                }
+            }
+
+            function extractColorFromBlobUrl(blobUrl) {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.crossOrigin = 'Anonymous';
+                    img.src = blobUrl;
+                    img.onload = function() {
+                        try {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, img.width, img.height);
+                            const data = ctx.getImageData(0, 0, img.width, img.height).data;
+                            let r = 0, g = 0, b = 0, count = 0;
+                            for (let i = 0; i < data.length; i += 40) {
+                                r += data[i];
+                                g += data[i+1];
+                                b += data[i+2];
+                                count++;
+                            }
+                            r = Math.floor(r / count);
+                            g = Math.floor(g / count);
+                            b = Math.floor(b / count);
+                            resolve(`rgb(${r}, ${g}, ${b})`);
+                        } catch {
+                            resolve('#1a1a1a');
+                        }
+                    };
+                    img.onerror = () => resolve('#1a1a1a');
+                });
+            }
+
+            // ---------- 更新背景和消息颜色 ----------
+            async function updateAmbientBg(imgUrl) {
+                const color = await getDominantColor(imgUrl);
+                currentBgColor = color;
+                ambientBg.style.background = `linear-gradient(180deg, ${color}, ${color}), linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.3) 100%)`;
+                updateMessageColorsFromBg(color);
+                saveAllData();
+            }
+
+            function initAmbientBg() { updateAmbientBg(DEFAULT_COVER); }
+
+            function updateCoverAndBg(imgUrl) {
+                albumCover.style.backgroundImage = `url('${imgUrl}')`;
+                updateAmbientBg(imgUrl);
+            }
+
+            // ---------- 播放控制 ----------
+            function playCurrent() {
+                audioPlayer.play().then(() => {
+                    isPlaying = true;
+                    recordDisc.style.animationPlayState = 'running';
+                    playPauseBtn.className = 'fas fa-pause-circle';
+                }).catch(e => console.log('播放失败:', e));
+            }
+            function pauseCurrent() {
+                audioPlayer.pause();
+                isPlaying = false;
+                recordDisc.style.animationPlayState = 'paused';
+                playPauseBtn.className = 'fas fa-play-circle';
+            }
+
+            window.playTrack = function(index) {
+                if (!playlist[index]) return;
+                currentTrackIndex = index;
+                musicTitle.innerText = playlist[index].title;
+                audioPlayer.src = playlist[index].audioUrl;
+                audioPlayer.load();
+                if (isPlaying) audioPlayer.play().catch(e => console.log('自动播放失败:', e));
+                saveAllData();
+            };
+
+            // 进度条
+            audioPlayer.addEventListener('timeupdate', function() {
+                if (audioPlayer.duration) {
+                    progressSlider.value = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+                    currentTimeSpan.textContent = formatTime(audioPlayer.currentTime);
+                    totalTimeSpan.textContent = formatTime(audioPlayer.duration);
+                }
+            });
+            audioPlayer.addEventListener('loadedmetadata', function() {
+                totalTimeSpan.textContent = formatTime(audioPlayer.duration);
+            });
+            progressSlider.addEventListener('input', function() {
+                if (audioPlayer.duration) {
+                    audioPlayer.currentTime = (progressSlider.value / 100) * audioPlayer.duration;
+                }
+            });
+
+            // ---------- 唱片/全屏切换 ----------
+            let showingRecord = true;
+            recordDiv.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (showingRecord) {
+                    recordDiv.style.display = 'none';
+                    historyDiv.style.display = 'flex';
+                    bubbleContainer.style.display = 'none';
+                    renderChatHistoryFull();
+                    showingRecord = false;
+                }
+            });
+            historyDiv.addEventListener('click', function() {
+                recordDiv.style.display = 'flex';
+                historyDiv.style.display = 'none';
+                bubbleContainer.style.display = 'flex';
+                showingRecord = true;
+            });
+
+            // ---------- 渲染全部聊天记录 ----------
+            function renderChatHistoryFull() {
+                let html = '';
+                let lastDate = null;
+                chatHistory.forEach((msg, idx) => {
+                    const dateStr = msg.time.split(' ')[0];
+                    if (lastDate && dateStr !== lastDate) {
+                        html += `<div class="date-separator"><span>${dateStr}</span></div>`;
+                    }
+                    lastDate = dateStr;
+                    html += `<div class="history-line" data-sender="${msg.sender}">
+                        <span class="history-text">${msg.content}</span>
+                        <span class="history-time">${msg.time.split(' ')[1] || msg.time}</span>
+                    </div>`;
+                });
+                historyDiv.innerHTML = html;
+                historyDiv.scrollTop = historyDiv.scrollHeight;
+            }
+
+            // ---------- 头像卡片 ----------
+            function showStatusCard() {
+                overlay.innerHTML = '';
+                const card = document.createElement('div');
+                card.className = 'status-card';
+                const rgbaColor = currentBgColor.replace('rgb', 'rgba').replace(')', ', 0.25)');
+                card.style.backgroundColor = rgbaColor;
+                card.innerHTML = `
+                    <div class="status-avatar-group">
+                        <div class="status-avatar-item">
+                            <img src="${document.querySelector('.avatar-pair img:first-child').src}" class="status-avatar" id="statusTaAvatar">
+                            <span class="status-text-only" id="opponentStatusDisplay">${opponentStatus}</span>
+                        </div>
+                        <div class="status-avatar-item">
+                            <img src="${document.querySelector('.avatar-pair img:last-child').src}" class="status-avatar" id="statusMyAvatar">
+                            <span class="status-text-only" id="myStatusDisplay">${myStatus}</span>
+                        </div>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="distance-custom" id="distanceEditable">
+                        <span>${distanceText}</span>
+                    </div>
+                `;
+                overlay.appendChild(card);
+                overlay.style.display = 'flex';
+
+                // 编辑我的状态
+                document.getElementById('myStatusDisplay').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const newStatus = prompt('编辑你的状态', myStatus);
+                    if (newStatus?.trim()) { 
+                        myStatus = newStatus.trim(); 
+                        this.innerText = myStatus;
+                        saveAllData();
+                    }
+                });
+
+                // 对方状态只显示
+                document.getElementById('opponentStatusDisplay').innerText = opponentStatus;
+
+                // 编辑距离与时间
+                const distSpan = document.querySelector('#distanceEditable span');
+                distSpan.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const newDist = prompt('编辑距离与时间', distanceText);
+                    if (newDist) {
+                        distanceText = newDist;
+                        this.innerText = distanceText;
+                        saveAllData();
+                    }
+                });
+
+                overlay.onclick = function(e) { if (e.target === overlay) overlay.style.display = 'none'; };
+            }
+            document.getElementById('avatarLeft').addEventListener('click', showStatusCard);
+            document.getElementById('avatarRight').addEventListener('click', showStatusCard);
+
+            // ---------- 陪伴 ----------
+            document.getElementById('companionBtn').addEventListener('click', function() {
+                overlay.innerHTML = '';
+                overlay.style.background = 'rgba(0,0,0,0.6)';
+                const card = document.createElement('div');
+                card.className = 'settings-menu-card';
+                card.innerHTML = `
+                    <div style="font-size:22px; margin-bottom:18px; color:#ddd;">陪伴</div>
+                    <div class="settings-menu-item" id="tarotMenuItem">占卜</div>
+                    <div class="settings-menu-item" id="coinMenuItem">决策币</div>
+                    <div class="settings-menu-item" id="statsMenuItem">记录</div>
+                `;
+                overlay.appendChild(card);
+                overlay.style.display = 'flex';
+                overlay.onclick = (e) => { if (e.target === overlay) overlay.style.display = 'none'; };
+                document.getElementById('tarotMenuItem').addEventListener('click', showTarot);
+                document.getElementById('coinMenuItem').addEventListener('click', showCoin);
+                document.getElementById('statsMenuItem').addEventListener('click', showStats);
+            });
+
+            // ---------- 塔罗占卜 ----------
+            function showTarot() {
+                overlay.innerHTML = '';
+                const card = document.createElement('div');
+                card.className = 'sub-settings-card';
+                card.innerHTML = `
+                    <span class="back-btn" id="backFromTarot">‹ 返回</span>
+                    <h3>🔮 塔罗占卜</h3>
+                    <input type="text" id="tarotQuestion" placeholder="输入问题" style="width:100%; padding:12px; border-radius:50px; border:none; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); margin-bottom:16px; color:#eee;">
+                    <label style="color:#ccc;">抽几张牌 (1-10):</label>
+                    <select id="drawCountSelect" style="margin:10px 0 20px; padding:10px; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); border:none; border-radius:50px; color:#eee;">
+                        ${[1,2,3,4,5,6,7,8,9,10].map(n => `<option>${n}</option>`).join('')}
+                    </select>
+                    <div style="display:flex; gap:10px;">
+                        <button id="drawBtn" style="flex:1; background:rgba(80,80,80,0.5); backdrop-filter:blur(4px); border:none; border-radius:50px; padding:14px; color:white;">显示牌背面</button>
+                        <button id="shuffleBtn" style="flex:1; background:rgba(60,60,60,0.5); backdrop-filter:blur(4px); border:none; border-radius:50px; padding:14px; color:white;">洗牌</button>
+                    </div>
+                    <div id="tarotCardsPreview" class="tarot-grid"></div>
+                    <div id="tarotResultMessage" style="margin-top:16px; color:#ccc;"></div>
+                `;
+                overlay.appendChild(card);
+                overlay.style.display = 'flex';
+
+                document.getElementById('backFromTarot').addEventListener('click', function() {
+                    overlay.innerHTML = '';
+                    document.getElementById('companionBtn').click();
+                });
+
+                let tarotDeck = [];
+                function buildDeck() {
+                    tarotDeck = [];
+                    for (let i = 0; i < 78; i++) {
+                        tarotDeck.push({
+                            index: i,
+                            name: tarotNames[i],
+                            reverse: Math.random() > 0.5 ? '逆位' : '正位'
+                        });
+                    }
+                }
+                buildDeck();
+
+                document.getElementById('shuffleBtn').addEventListener('click', function() {
+                    buildDeck();
+                    document.getElementById('tarotResultMessage').innerHTML = '🃏 牌堆已洗乱';
+                    document.getElementById('tarotCardsPreview').innerHTML = '';
+                });
+
+                document.getElementById('drawBtn').addEventListener('click', function() {
+                    const count = parseInt(document.getElementById('drawCountSelect').value);
+                    const preview = document.getElementById('tarotCardsPreview');
+                    preview.innerHTML = '';
+                    const shuffled = [...tarotDeck].sort(() => Math.random() - 0.5);
+                    const selected = shuffled.slice(0, count);
+                    selected.forEach((cardData) => {
+                        let cardDiv = document.createElement('div');
+                        cardDiv.className = 'tarot-card';
+                        cardDiv.innerText = '🃏';
+                        cardDiv.dataset.name = cardData.name;
+                        cardDiv.dataset.reverse = cardData.reverse;
+                        cardDiv.addEventListener('click', function(e) {
+                            this.classList.add('flipped');
+                            this.innerText = this.dataset.reverse + '\n' + this.dataset.name;
+                        });
+                        preview.appendChild(cardDiv);
+                    });
+                });
+                overlay.onclick = (e) => { if (e.target === overlay) overlay.style.display = 'none'; };
+            }
+
+            // ---------- 决策币 ----------
+            function showCoin() {
+                overlay.innerHTML = '';
+                const card = document.createElement('div');
+                card.className = 'sub-settings-card';
+                card.innerHTML = `
+                    <span class="back-btn" id="backFromCoin">‹ 返回</span>
+                    <div style="display:flex; flex-direction:column; align-items:center; padding:20px;">
+                        <div id="coinContainer" style="width: 120px; height: 120px; display: flex; justify-content: center; align-items: center; cursor:pointer;">
+                            <img id="coinImg" style="max-width:100%; max-height:100%; display: none;">
+                            <span id="coinEmoji" style="font-size: 90px; color:#ccc;">🪙</span>
+                        </div>
+                        <div id="coinAnswer" style="margin-top:28px; font-size: 30px; color:#aaa;"></div>
+                    </div>
+                `;
+                overlay.appendChild(card);
+                overlay.style.display = 'flex';
+
+                document.getElementById('backFromCoin').addEventListener('click', function() {
+                    overlay.innerHTML = '';
+                    document.getElementById('companionBtn').click();
+                });
+
+                const coinContainer = document.getElementById('coinContainer');
+                const coinImg = document.getElementById('coinImg');
+                const coinEmoji = document.getElementById('coinEmoji');
+                if (coinFrontImg) {
+                    coinImg.src = coinFrontImg;
+                    coinImg.style.display = 'block';
+                    coinEmoji.style.display = 'none';
+                } else {
+                    coinImg.style.display = 'none';
+                    coinEmoji.style.display = 'block';
+                }
+
+                coinContainer.addEventListener('click', function() {
+                    coinContainer.classList.add('coin-spin');
+                    setTimeout(() => coinContainer.classList.remove('coin-spin'), 500);
+                    setTimeout(() => {
+                        const isYes = Math.random() > 0.5;
+                        document.getElementById('coinAnswer').innerText = isYes ? 'YES' : 'NO';
+                        if (isYes && coinFrontImg) {
+                            coinImg.src = coinFrontImg;
+                            coinImg.style.display = 'block';
+                            coinEmoji.style.display = 'none';
+                        } else if (!isYes && coinBackImg) {
+                            coinImg.src = coinBackImg;
+                            coinImg.style.display = 'block';
+                            coinEmoji.style.display = 'none';
+                        } else {
+                            coinImg.style.display = 'none';
+                            coinEmoji.style.display = 'block';
+                        }
+                    }, 250);
+                });
+                overlay.onclick = (e) => { if (e.target === overlay) overlay.style.display = 'none'; };
+            }
+
+            // ---------- 记录 ----------
+            function showStats() {
+                overlay.innerHTML = '';
+                const card = document.createElement('div');
+                card.className = 'sub-settings-card';
+                const opponentMessages = chatHistory.filter(m => m.sender === '对方').map(m => m.content);
+                const wordCount = {};
+                opponentMessages.forEach(msg => {
+                    msg.split(/[\s,，.。]+/).forEach(w => { if (w.length > 1) wordCount[w] = (wordCount[w] || 0) + 1; });
+                });
+                const sorted = Object.entries(wordCount).sort((a,b) => b[1]-a[1]).slice(0,3);
+                const topWordsHtml = sorted.length ? sorted.map(([w,c]) => `<div style="color:white;">${w} (${c})</div>`).join('') : '<div style="color:#aaa;">暂无数据</div>';
+                const totalMessages = chatHistory.length;
+                card.innerHTML = `
+                    <span class="back-btn" id="backFromStats">‹ 返回</span>
+                    <h3 style="margin-bottom:24px; color:white;">📊 聊天记录</h3>
+                    <div style="font-size:18px; margin-bottom:20px; color:white;">一共聊了 ${totalMessages} 条</div>
+                    <div style="font-size:18px; margin-bottom:20px; color:white;">${taNickname}的高频词</div>
+                    <div style="margin-bottom:24px;">${topWordsHtml}</div>
+                    <div style="font-size:18px; color:white;">🎂 纪念日</div>
+                    <span id="memorialDay" style="background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); padding:14px 28px; border-radius:50px; display:inline-block; cursor:pointer; font-size:18px; margin-top:12px; border:none; color:white;">${memorialDay}</span>
+                `;
+                overlay.appendChild(card);
+                overlay.style.display = 'flex';
+
+                document.getElementById('backFromStats').addEventListener('click', function() {
+                    overlay.innerHTML = '';
+                    document.getElementById('companionBtn').click();
+                });
+
+                // 纪念日点击编辑
+                document.getElementById('memorialDay').addEventListener('click', function(){
+                    const newDate = prompt('编辑纪念日', memorialDay);
+                    if (newDate) {
+                        memorialDay = newDate;
+                        this.innerText = memorialDay;
+                        saveAllData();
+                    }
+                });
+
+                overlay.onclick = (e) => { if (e.target === overlay) overlay.style.display = 'none'; };
+            }
+
+            // ---------- 聊天按钮 ----------
+            document.getElementById('chatBtn').addEventListener('click', function() {
+                let chatCard = document.querySelector('.bottom-chat-card');
+                if (chatCard) chatCard.remove();
+                chatCard = document.createElement('div');
+                chatCard.className = 'bottom-chat-card';
+                chatCard.innerHTML = `
+                    <input type="text" id="bottomMsgInput" placeholder="输入消息" value="" autofocus>
+                    <button id="bottomSendBtn">发送</button>
+                `;
+                document.body.appendChild(chatCard);
+                function outsideClickListener(e) {
+                    if (!chatCard.contains(e.target) && e.target !== document.getElementById('chatBtn')) {
+                        chatCard.remove();
+                        document.removeEventListener('click', outsideClickListener);
+                    }
+                }
+                setTimeout(() => document.addEventListener('click', outsideClickListener), 100);
+                document.getElementById('bottomSendBtn').addEventListener('click', sendMessageFromBottom);
+                document.getElementById('bottomMsgInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessageFromBottom(); });
+            });
+
+            function sendMessageFromBottom() {
+                const input = document.getElementById('bottomMsgInput');
+                if (!input) return;
+                const msg = input.value.trim();
+                if (!msg) return;
+                lastMyMsg = msg;
+                myBubble.innerText = msg;
+                const now = new Date();
+                const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+                const timeStr = `${dateStr} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+                chatHistory.push({ sender: '我', content: msg, time: timeStr });
+                renderChatHistoryFull();
+                input.value = '';
+                input.focus();
+                saveAllData();
+
+                typingEl.style.display = 'inline-block';
+                const delaySec = (Math.floor(Math.random() * (delayMax - delayMin + 1) + delayMin)) * 1000;
+                const replyCount = Math.floor(Math.random() * (replyMax - replyMin + 1) + replyMin);
+                setTimeout(() => {
+                    for (let i=0; i<replyCount; i++) {
+                        let reply = replyCorpus[Math.floor(Math.random() * replyCorpus.length)];
+                        if (i === replyCount-1) {
+                            lastOpponentMsg = reply;
+                            opponentBubble.innerText = reply;
+                        }
+                        let t = new Date();
+                        let rdate = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+                        let rt = `${rdate} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+                        chatHistory.push({ sender: '对方', content: reply, time: rt });
+                    }
+                    typingEl.style.display = 'none';
+                    renderChatHistoryFull();
+                    saveAllData();
+                }, delaySec);
+            }
+
+            // ---------- 设置 ----------
+            document.getElementById('settingsBtn').addEventListener('click', function() {
+                overlay.innerHTML = '';
+                overlay.style.background = 'rgba(0,0,0,0.6)';
+                const card = document.createElement('div');
+                card.className = 'settings-menu-card';
+                card.innerHTML = `
+                    <div style="font-size:22px; margin-bottom:12px; color:#ddd;">设置</div>
+                    <div class="settings-menu-item" id="beautySub">美化</div>
+                    <div class="settings-menu-item" id="chatSub">聊天</div>
+                    <div class="settings-menu-item" id="dataSub">数据</div>
+                `;
+                overlay.appendChild(card);
+                overlay.style.display = 'flex';
+                overlay.onclick = (e) => { if (e.target === overlay) overlay.style.display = 'none'; };
+                document.getElementById('beautySub').addEventListener('click', showBeautySettings);
+                document.getElementById('chatSub').addEventListener('click', showChatSettings);
+                document.getElementById('dataSub').addEventListener('click', showDataSettings);
+            });
+
+            // 字体应用函数
+            function applyFont(fontFamily, fontUrl, format) {
+                const style = `@font-face {
+                    font-family: '${fontFamily}';
+                    src: url('${fontUrl}') format('${format}');
+                    font-weight: normal;
+                    font-style: normal;
+                }
+                body, .player, .music-title, .avatar-pair, .chat-bubbles, .bubble, 
+                .history-text, .history-time, .date-separator, .status-text-only, 
+                .distance-custom, .settings-menu-item, .sub-settings-card h3, 
+                .settings-row, .corpus-table td, .playlist-item span, .tarot-card,
+                input, button, .typing-indicator, .back-btn, .file-upload-label,
+                .pagination span, .bottom-chat-card input, .bottom-chat-card button,
+                .time-display, .status-card, .status-avatar-item span,
+                .history-line .history-text, .playlist-item, .delete-song,
+                .action-icon, .play-controls i, .fa, .fas, .far, .fab {
+                    font-family: '${fontFamily}', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+                }
+                i, .fas, .far, .fab, .action-icon, .play-controls i, .delete-song,
+                .fa-heart, .fa-comment-dots, .fa-bars, .fa-random, .fa-backward-step,
+                .fa-pause-circle, .fa-play-circle, .fa-forward-step, .fa-list-ul,
+                .fa-trash, [class*="fa-"] {
+                    font-family: 'Font Awesome 6 Free', 'Font Awesome 6 Free', 'Font Awesome 5 Free', 'Font Awesome 5 Brands', 'FontAwesome' !important;
+                }`;
+                fontStyle.innerHTML = style;
+                saveAllData();
+                alert(`字体已应用：${fontFamily}`);
+            }
+
+            // 工具：blob/url转换
+            async function blobUrlToBase64(blobUrl) {
+                if (!blobUrl || !blobUrl.startsWith('blob:')) return blobUrl;
+                try {
+                    const response = await fetch(blobUrl);
+                    const blob = await response.blob();
+                    return new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(blob);
+                    });
+                } catch {
+                    return blobUrl;
+                }
+            }
+            function base64ToBlobUrl(base64, type = 'image/png') {
+                const byteCharacters = atob(base64.split(',')[1]);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type });
+                return URL.createObjectURL(blob);
+            }
+
+            // ---------- 本地存储 ----------
+            async function saveAllData() {
+                try {
+                    const [myAvatarBase64, taAvatarBase64, coverBase64, coinFrontBase64, coinBackBase64] = await Promise.all([
+                        blobUrlToBase64(document.querySelector('.avatar-pair img:last-child').src),
+                        blobUrlToBase64(document.querySelector('.avatar-pair img:first-child').src),
+                        blobUrlToBase64(albumCover.style.backgroundImage.slice(5, -2) || DEFAULT_COVER),
+                        blobUrlToBase64(coinFrontImg),
+                        blobUrlToBase64(coinBackImg)
+                    ]);
+
+                    const playlistWithBase64 = await Promise.all(playlist.map(async (item) => ({
+                        title: item.title,
+                        audioUrl: await blobUrlToBase64(item.audioUrl)
+                    })));
+
+                    const data = {
+                        version: '1.0',
+                        timestamp: Date.now(),
+                        taNickname,
+                        myStatus,
+                        opponentStatus,
+                        distanceText,
+                        memorialDay, // 保存纪念日
+                        chatHistory,
+                        replyCorpus,
+                        statusCorpus,
+                        replyMin, replyMax, delayMin, delayMax,
+                        playlist: playlistWithBase64,
+                        coinFrontImg: coinFrontBase64,
+                        coinBackImg: coinBackBase64,
+                        myAvatar: myAvatarBase64,
+                        taAvatar: taAvatarBase64,
+                        cover: coverBase64,
+                        customFontCss: fontStyle.innerHTML,
+                        userCss: userStyle.innerHTML,
+                        isRandomMode
+                    };
+                    localStorage.setItem('togetherData', JSON.stringify(data));
+                } catch (e) {
+                    console.warn('保存失败', e);
+                }
+            }
+
+            async function loadAllData() {
+                const saved = localStorage.getItem('togetherData');
+                if (!saved) return;
+                try {
+                    const data = JSON.parse(saved);
+
+                    taNickname = data.taNickname || 'TA';
+                    myStatus = data.myStatus || '🍵 喝茶';
+                    opponentStatus = data.opponentStatus || statusCorpus[0];
+                    distanceText = data.distanceText || '相距 1,284km · 一起听 3h';
+                    memorialDay = data.memorialDay || '2026-02-11'; // 恢复纪念日
+                    chatHistory = data.chatHistory || [];
+                    replyCorpus = data.replyCorpus || replyCorpus;
+                    statusCorpus = data.statusCorpus || statusCorpus;
+                    replyMin = data.replyMin ?? 1;
+                    replyMax = data.replyMax ?? 3;
+                    delayMin = data.delayMin ?? 2;
+                    delayMax = data.delayMax ?? 6;
+                    isRandomMode = data.isRandomMode ?? true;
+
+                    if (data.playlist) {
+                        playlist.length = 0;
+                        for (const item of data.playlist) {
+                            let audioUrl = item.audioUrl;
+                            if (typeof audioUrl === 'string' && audioUrl.startsWith('data:')) {
+                                try {
+                                    const blob = await (await fetch(audioUrl)).blob();
+                                    audioUrl = URL.createObjectURL(blob);
+                                } catch {
+                                    audioUrl = item.audioUrl;
+                                }
+                            }
+                            playlist.push({ title: item.title, audioUrl });
+                        }
+                        if (playlist.length === 0) playlist.push({ title: '暂无歌曲', audioUrl: '' });
+                        if (currentTrackIndex >= playlist.length) currentTrackIndex = 0;
+                        if (playlist[currentTrackIndex]) window.playTrack(currentTrackIndex);
+                    }
+
+                    if (data.coinFrontImg && data.coinFrontImg.startsWith('data:')) {
+                        coinFrontImg = base64ToBlobUrl(data.coinFrontImg);
+                    } else { coinFrontImg = null; }
+                    if (data.coinBackImg && data.coinBackImg.startsWith('data:')) {
+                        coinBackImg = base64ToBlobUrl(data.coinBackImg);
+                    } else { coinBackImg = null; }
+
+                    if (data.myAvatar && data.myAvatar.startsWith('data:')) {
+                        const url = base64ToBlobUrl(data.myAvatar);
+                        document.querySelector('.avatar-pair img:last-child').src = url;
+                        const statusMy = document.querySelector('#statusMyAvatar');
+                        if (statusMy) statusMy.src = url;
+                    }
+                    if (data.taAvatar && data.taAvatar.startsWith('data:')) {
+                        const url = base64ToBlobUrl(data.taAvatar);
+                        document.querySelector('.avatar-pair img:first-child').src = url;
+                        const statusTa = document.querySelector('#statusTaAvatar');
+                        if (statusTa) statusTa.src = url;
+                    }
+
+                    if (data.cover && data.cover.startsWith('data:')) {
+                        const url = base64ToBlobUrl(data.cover);
+                        updateCoverAndBg(url);
+                    } else {
+                        updateCoverAndBg(DEFAULT_COVER);
+                    }
+
+                    if (data.customFontCss) {
+                        fontStyle.innerHTML = data.customFontCss;
+                    } else {
+                        fontStyle.innerHTML = '';
+                    }
+
+                    if (data.userCss !== undefined) {
+                        userStyle.innerHTML = data.userCss;
+                    }
+
+                    renderChatHistoryFull();
+                    opponentBubble.innerHTML = chatHistory.filter(m => m.sender === '对方').slice(-1)[0]?.content || '&nbsp;';
+                    myBubble.innerHTML = chatHistory.filter(m => m.sender === '我').slice(-1)[0]?.content || '&nbsp;';
+                    playModeIcon.className = isRandomMode ? 'fas fa-random' : 'fas fa-repeat';
+                } catch (e) {
+                    console.warn('加载失败', e);
+                }
+            }
+
+            // ---------- 对方状态定时更新 ----------
+            function scheduleOpponentStatusUpdate() {
+                const update = () => {
+                    opponentStatus = statusCorpus[Math.floor(Math.random() * statusCorpus.length)];
+                    saveAllData();
+                    const nextDelay = Math.floor(Math.random() * (15 - 5 + 1) + 5) * 60 * 1000;
+                    setTimeout(update, nextDelay);
+                };
+                if (window.opponentTimer) clearTimeout(window.opponentTimer);
+                window.opponentTimer = setTimeout(update, Math.floor(Math.random() * (15 - 5 + 1) + 5) * 60 * 1000);
+            }
+
+            // ---------- 美化设置 ----------
+            function showBeautySettings() {
+                overlay.innerHTML = '';
+                const card = document.createElement('div');
+                card.className = 'sub-settings-card';
+                card.innerHTML = `
+                    <span class="back-btn" id="backFromBeauty">‹ 返回</span>
+                    <h3>✨ 美化</h3>
+                    <div class="settings-row">
+                        我的头像
+                        <span class="file-upload-label" id="uploadMyAvatar">上传</span>
+                        <span class="file-upload-label" id="editMyNickname">编辑昵称</span>
+                    </div>
+                    <div class="settings-row">
+                        TA的头像
+                        <span class="file-upload-label" id="uploadTaAvatar">上传</span>
+                        <span class="file-upload-label" id="editTaNickname">编辑昵称</span>
+                    </div>
+                    <div class="settings-row">
+                        专辑封面（背景同步）
+                        <span class="file-upload-label" id="uploadCover">上传</span>
+                        <span class="file-upload-label" id="resetCover">恢复默认</span>
+                    </div>
+                    <div class="settings-row">
+                        硬币正面
+                        <span class="file-upload-label" id="uploadCoinFront">上传</span>
+                        <span class="file-upload-label" id="clearCoinFront">清除</span>
+                    </div>
+                    <div class="settings-row">
+                        硬币反面
+                        <span class="file-upload-label" id="uploadCoinBack">上传</span>
+                        <span class="file-upload-label" id="clearCoinBack">清除</span>
+                    </div>
+                    <div style="margin-top:24px;">
+                        <h4 style="font-size:18px; color:#ddd; margin-bottom:12px;">🎨 自定义字体</h4>
+                        <div class="settings-row">
+                            上传字体文件
+                            <span class="file-upload-label" id="uploadFontFile">上传</span>
+                        </div>
+                        <div class="settings-row">
+                            字体URL
+                            <input type="text" id="fontUrlInput" placeholder="https://example.com/font.woff2" style="flex:1; margin-left:8px; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); border:none; border-radius:50px; padding:8px 12px; color:#eee;">
+                            <span class="file-upload-label" id="importFontUrl">导入</span>
+                        </div>
+                        <div style="display:flex; gap:10px; margin-top:16px;">
+                            <button id="applyFontBtn" style="flex:1; background:rgba(80,80,80,0.5); backdrop-filter:blur(4px); border:none; border-radius:50px; padding:10px; color:white;">应用字体</button>
+                            <button id="clearFontBtn" style="flex:1; background:rgba(60,60,60,0.5); backdrop-filter:blur(4px); border:none; border-radius:50px; padding:10px; color:white;">恢复默认</button>
+                        </div>
+                    </div>
+                    <div style="margin-top:24px;">
+                        <h4 style="font-size:18px; color:#ddd; margin-bottom:12px;">🎨 自定义CSS</h4>
+                        <textarea id="userCssText" rows="6" style="width:100%; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); border:none; border-radius:20px; padding:16px; font-family:monospace; font-size:14px; color:#eee;"></textarea>
+                        <div style="display:flex; gap:10px; margin-top:16px;">
+                            <button id="applyCssBtn" style="flex:1; background:rgba(80,80,80,0.5); backdrop-filter:blur(4px); border:none; border-radius:50px; padding:12px; color:white;">应用CSS</button>
+                            <button id="resetCssBtn" style="flex:1; background:rgba(60,60,60,0.5); backdrop-filter:blur(4px); border:none; border-radius:50px; padding:12px; color:white;">恢复默认</button>
+                        </div>
+                    </div>
+                `;
+                overlay.appendChild(card);
+                overlay.style.display = 'flex';
+
+                document.getElementById('backFromBeauty').addEventListener('click', function() {
+                    overlay.innerHTML = '';
+                    document.getElementById('settingsBtn').click();
+                });
+
+                function triggerFileUpload(accept, callback) {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = accept;
+                    input.onchange = (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const url = URL.createObjectURL(file);
+                            callback(url, file);
+                        }
+                    };
+                    input.click();
+                }
+
+                // 头像上传
+                document.getElementById('uploadMyAvatar').addEventListener('click', () => {
+                    triggerFileUpload('image/*', (url) => {
+                        document.querySelector('.avatar-pair img:last-child').src = url;
+                        const statusMy = document.querySelector('#statusMyAvatar');
+                        if (statusMy) statusMy.src = url;
+                        saveAllData();
+                    });
+                });
+                document.getElementById('uploadTaAvatar').addEventListener('click', () => {
+                    triggerFileUpload('image/*', (url) => {
+                        document.querySelector('.avatar-pair img:first-child').src = url;
+                        const statusTa = document.querySelector('#statusTaAvatar');
+                        if (statusTa) statusTa.src = url;
+                        saveAllData();
+                    });
+                });
+                document.getElementById('editMyNickname').addEventListener('click', () => {
+                    const newName = prompt('编辑我的昵称', '我');
+                    if (newName) { alert('昵称已更新为: ' + newName); saveAllData(); }
+                });
+                document.getElementById('editTaNickname').addEventListener('click', () => {
+                    const newName = prompt('编辑TA的昵称', taNickname);
+                    if (newName?.trim()) {
+                        taNickname = newName.trim();
+                        alert(`对方昵称已更新为: ${taNickname}`);
+                        saveAllData();
+                    }
+                });
+
+                // 专辑封面
+                document.getElementById('uploadCover').addEventListener('click', () => {
+                    triggerFileUpload('image/*', (url) => {
+                        updateCoverAndBg(url);
+                        saveAllData();
+                    });
+                });
+                document.getElementById('resetCover').addEventListener('click', () => {
+                    updateCoverAndBg(DEFAULT_COVER);
+                    saveAllData();
+                });
+
+                // 硬币
+                document.getElementById('uploadCoinFront').addEventListener('click', () => {
+                    triggerFileUpload('image/*', (url) => {
+                        coinFrontImg = url;
+                        saveAllData();
+                        alert('硬币正面已更新');
+                    });
+                });
+                document.getElementById('clearCoinFront').addEventListener('click', () => {
+                    coinFrontImg = null;
+                    saveAllData();
+                    alert('硬币正面已清除');
+                });
+                document.getElementById('uploadCoinBack').addEventListener('click', () => {
+                    triggerFileUpload('image/*', (url) => {
+                        coinBackImg = url;
+                        saveAllData();
+                        alert('硬币反面已更新');
+                    });
+                });
+                document.getElementById('clearCoinBack').addEventListener('click', () => {
+                    coinBackImg = null;
+                    saveAllData();
+                    alert('硬币反面已清除');
+                });
+
+                // 字体
+                document.getElementById('uploadFontFile').addEventListener('click', () => {
+                    triggerFileUpload('.ttf,.woff,.woff2,font/*', (url, file) => {
+                        const fontName = 'CustomFont_' + Date.now();
+                        const ext = file.name.split('.').pop().toLowerCase();
+                        let format = 'woff2';
+                        if (ext === 'ttf') format = 'truetype';
+                        else if (ext === 'woff') format = 'woff';
+                        else if (ext === 'woff2') format = 'woff2';
+                        applyFont(fontName, url, format);
+                        saveAllData();
+                    });
+                });
+                document.getElementById('importFontUrl').addEventListener('click', () => {
+                    const url = document.getElementById('fontUrlInput').value.trim();
+                    if (!url) { alert('请输入字体URL'); return; }
+                    const extension = url.split('.').pop().toLowerCase();
+                    let format = 'woff2';
+                    if (extension === 'ttf') format = 'truetype';
+                    else if (extension === 'woff') format = 'woff';
+                    else if (extension === 'woff2') format = 'woff2';
+                    const fontName = 'CustomFont_' + Date.now();
+                    applyFont(fontName, url, format);
+                    saveAllData();
+                });
+                document.getElementById('clearFontBtn').addEventListener('click', () => {
+                    fontStyle.innerHTML = '';
+                    saveAllData();
+                    alert('已恢复默认字体');
+                });
+
+                // CSS编辑
+                const userCssText = document.getElementById('userCssText');
+                userCssText.value = userStyle.innerHTML || '';
+                document.getElementById('applyCssBtn').addEventListener('click', () => {
+                    userStyle.innerHTML = userCssText.value;
+                    saveAllData();
+                });
+                document.getElementById('resetCssBtn').addEventListener('click', () => {
+                    userStyle.innerHTML = '';
+                    userCssText.value = '';
+                    saveAllData();
+                });
+
+                overlay.onclick = (e) => { if (e.target === overlay) overlay.style.display = 'none'; };
+            }
+
+            // ---------- 聊天设置 ----------
+            function showChatSettings() {
+                overlay.innerHTML = '';
+                const card = document.createElement('div');
+                card.className = 'sub-settings-card';
+                card.innerHTML = `
+                    <span class="back-btn" id="backFromChat">‹ 返回</span>
+                    <h3>💬 聊天参数</h3>
+                    <div class="settings-row">
+                        回复条数区间
+                        <input type="number" id="replyMinInput" value="${replyMin}" style="width:65px; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); border:none; border-radius:50px; padding:8px; color:#eee;" min="1" max="5"> -
+                        <input type="number" id="replyMaxInput" value="${replyMax}" style="width:65px; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); border:none; border-radius:50px; padding:8px; color:#eee;" min="1" max="5">
+                    </div>
+                    <div class="settings-row">
+                        延迟区间 (秒)
+                        <input type="number" id="delayMinInput" value="${delayMin}" style="width:65px; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); border:none; border-radius:50px; padding:8px; color:#eee;" min="1" max="15"> -
+                        <input type="number" id="delayMaxInput" value="${delayMax}" style="width:65px; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); border:none; border-radius:50px; padding:8px; color:#eee;" min="1" max="15">
+                    </div>
+                    <button id="saveChatInterval" style="background:rgba(80,80,80,0.5); backdrop-filter:blur(4px); border:none; border-radius:50px; padding:12px; margin-top:24px; width:100%; color:white;">保存区间</button>
+                `;
+                overlay.appendChild(card);
+                overlay.style.display = 'flex';
+                document.getElementById('backFromChat').addEventListener('click', function() {
+                    overlay.innerHTML = '';
+                    document.getElementById('settingsBtn').click();
+                });
+                document.getElementById('saveChatInterval').addEventListener('click', function() {
+                    let rmin = parseInt(document.getElementById('replyMinInput').value);
+                    let rmax = parseInt(document.getElementById('replyMaxInput').value);
+                    let dmin = parseInt(document.getElementById('delayMinInput').value);
+                    let dmax = parseInt(document.getElementById('delayMaxInput').value);
+                    if (rmin > rmax) [rmin, rmax] = [rmax, rmin];
+                    if (dmin > dmax) [dmin, dmax] = [dmax, dmin];
+                    replyMin = rmin; replyMax = rmax;
+                    delayMin = dmin; delayMax = dmax;
+                    saveAllData();
+                    alert('聊天区间已更新');
+                });
+                overlay.onclick = (e) => { if (e.target === overlay) overlay.style.display = 'none'; };
+            }
+
+            // ---------- 数据设置 ----------
+            let replyPage = 1, statusPage = 1;
+            const pageSize = 10;
+            function showDataSettings() {
+                overlay.innerHTML = '';
+                const card = document.createElement('div');
+                card.className = 'sub-settings-card';
+                card.innerHTML = `
+                    <span class="back-btn" id="backFromData">‹ 返回</span>
+                    <h3>📦 数据管理</h3>
+                    <div class="settings-row" style="cursor:pointer;" id="databaseSub">数据库 · 语料库</div>
+                    <div class="settings-row" style="cursor:pointer;" id="initData">初始化</div>
+                    <div class="settings-row" style="cursor:pointer;" id="exportData">导出数据</div>
+                    <div class="settings-row" style="cursor:pointer;" id="importData">导入数据</div>
+                `;
+                overlay.appendChild(card);
+                overlay.style.display = 'flex';
+
+                document.getElementById('backFromData').addEventListener('click', function() {
+                    overlay.innerHTML = '';
+                    document.getElementById('settingsBtn').click();
+                });
+
+                document.getElementById('databaseSub').addEventListener('click', showCorpusSettings);
+
+                document.getElementById('initData').addEventListener('click', function() {
+                    if (confirm('重置所有聊天记录和语料库？\n头像、封面、播放列表也将恢复默认。')) {
+                        chatHistory = [];
+                        replyCorpus = ['这版编曲真妙', '我也想学钢琴了', '雨天听绝配', '循环停不下来', '你最近歌品味很好', '爵士和弦好舒服', '专辑封面也美', '我标记了红心'];
+                        statusCorpus = ['☕️ 喝咖啡', '📚 阅读', '🎹 练琴', '🚶 散步', '🌧 听雨', '😴 小憩'];
+                        myStatus = '🍵 喝茶';
+                        opponentStatus = statusCorpus[Math.floor(Math.random() * statusCorpus.length)];
+                        distanceText = '相距 1,284km · 一起听 3h';
+                        memorialDay = '2026-02-11'; // 重置纪念日
+                        taNickname = 'TA';
+                        isRandomMode = true;
+                        playModeIcon.className = 'fas fa-random';
+
+                        document.querySelector('.avatar-pair img:first-child').src = DEFAULT_AVATAR;
+                        document.querySelector('.avatar-pair img:last-child').src = DEFAULT_AVATAR;
+                        updateCoverAndBg(DEFAULT_COVER);
+
+                        playlist = [
+                            { title: 'autumn leaves · bill evans', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
+                            { title: 'blue in green · miles', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
+                            { title: 'my funny valentine · chet', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
+                            { title: 'so what · coltrane', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' }
+                        ];
+                        currentTrackIndex = 0;
+                        window.playTrack(0);
+                        if (window.renderPlaylist) window.renderPlaylist();
+
+                        coinFrontImg = null;
+                        coinBackImg = null;
+                        fontStyle.innerHTML = '';
+                        userStyle.innerHTML = '';
+
+                        renderChatHistoryFull();
+                        opponentBubble.innerHTML = '&nbsp;';
+                        myBubble.innerHTML = '&nbsp;';
+                        saveAllData();
+                        alert('已初始化');
+                    }
+                });
+
+                document.getElementById('exportData').addEventListener('click', async function() {
+                    alert('正在打包数据，请稍候...');
+                    const [myAvatarBase64, taAvatarBase64, coverBase64, coinFrontBase64, coinBackBase64] = await Promise.all([
+                        blobUrlToBase64(document.querySelector('.avatar-pair img:last-child').src),
+                        blobUrlToBase64(document.querySelector('.avatar-pair img:first-child').src),
+                        blobUrlToBase64(albumCover.style.backgroundImage.slice(5, -2) || DEFAULT_COVER),
+                        blobUrlToBase64(coinFrontImg),
+                        blobUrlToBase64(coinBackImg)
+                    ]);
+
+                    const playlistWithBase64 = await Promise.all(playlist.map(async (item) => ({
+                        title: item.title,
+                        audioUrl: await blobUrlToBase64(item.audioUrl)
+                    })));
+
+                    const exportData = {
+                        version: '1.0',
+                        timestamp: Date.now(),
+                        taNickname,
+                        myStatus,
+                        opponentStatus,
+                        distanceText,
+                        memorialDay, // 包含纪念日
+                        chatHistory,
+                        replyCorpus,
+                        statusCorpus,
+                        replyMin, replyMax, delayMin, delayMax,
+                        playlist: playlistWithBase64,
+                        coinFrontImg: coinFrontBase64,
+                        coinBackImg: coinBackBase64,
+                        myAvatar: myAvatarBase64,
+                        taAvatar: taAvatarBase64,
+                        cover: coverBase64,
+                        customFontCss: fontStyle.innerHTML,
+                        userCss: userStyle.innerHTML,
+                        isRandomMode
+                    };
+
+                    const jsonStr = JSON.stringify(exportData, null, 2);
+                    const blob = new Blob([jsonStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `together-data-${new Date().toISOString().slice(0,10)}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    alert('导出成功！');
+                });
+
+                document.getElementById('importData').addEventListener('click', function() {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'application/json';
+                    input.onchange = async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        try {
+                            const text = await file.text();
+                            const data = JSON.parse(text);
+
+                            taNickname = data.taNickname || 'TA';
+                            myStatus = data.myStatus || '🍵 喝茶';
+                            opponentStatus = data.opponentStatus || statusCorpus[0];
+                            distanceText = data.distanceText || '相距 1,284km · 一起听 3h';
+                            memorialDay = data.memorialDay || '2026-02-11'; // 恢复纪念日
+                            chatHistory = data.chatHistory || [];
+                            replyCorpus = data.replyCorpus || replyCorpus;
+                            statusCorpus = data.statusCorpus || statusCorpus;
+                            replyMin = data.replyMin ?? 1;
+                            replyMax = data.replyMax ?? 3;
+                            delayMin = data.delayMin ?? 2;
+                            delayMax = data.delayMax ?? 6;
+                            isRandomMode = data.isRandomMode ?? true;
+
+                            if (data.playlist) {
+                                playlist.length = 0;
+                                for (const item of data.playlist) {
+                                    let audioUrl = item.audioUrl;
+                                    if (typeof audioUrl === 'string' && audioUrl.startsWith('data:')) {
+                                        try {
+                                            const blob = await (await fetch(audioUrl)).blob();
+                                            audioUrl = URL.createObjectURL(blob);
+                                        } catch {
+                                            audioUrl = item.audioUrl;
+                                        }
+                                    }
+                                    playlist.push({ title: item.title, audioUrl });
+                                }
+                                if (playlist.length === 0) playlist.push({ title: '暂无歌曲', audioUrl: '' });
+                                currentTrackIndex = 0;
+                                window.playTrack(0);
+                                window.renderPlaylist?.();
+                            }
+
+                            if (data.coinFrontImg && data.coinFrontImg.startsWith('data:')) {
+                                coinFrontImg = base64ToBlobUrl(data.coinFrontImg);
+                            } else { coinFrontImg = null; }
+                            if (data.coinBackImg && data.coinBackImg.startsWith('data:')) {
+                                coinBackImg = base64ToBlobUrl(data.coinBackImg);
+                            } else { coinBackImg = null; }
+
+                            if (data.myAvatar && data.myAvatar.startsWith('data:')) {
+                                const url = base64ToBlobUrl(data.myAvatar);
+                                document.querySelector('.avatar-pair img:last-child').src = url;
+                                const statusMy = document.querySelector('#statusMyAvatar');
+                                if (statusMy) statusMy.src = url;
+                            }
+                            if (data.taAvatar && data.taAvatar.startsWith('data:')) {
+                                const url = base64ToBlobUrl(data.taAvatar);
+                                document.querySelector('.avatar-pair img:first-child').src = url;
+                                const statusTa = document.querySelector('#statusTaAvatar');
+                                if (statusTa) statusTa.src = url;
+                            }
+
+                            if (data.cover && data.cover.startsWith('data:')) {
+                                const url = base64ToBlobUrl(data.cover);
+                                updateCoverAndBg(url);
+                            } else {
+                                updateCoverAndBg(DEFAULT_COVER);
+                            }
+
+                            if (data.customFontCss) {
+                                fontStyle.innerHTML = data.customFontCss;
+                            } else {
+                                fontStyle.innerHTML = '';
+                            }
+
+                            if (data.userCss !== undefined) {
+                                userStyle.innerHTML = data.userCss;
+                            }
+
+                            renderChatHistoryFull();
+                            opponentBubble.innerHTML = chatHistory.filter(m => m.sender === '对方').slice(-1)[0]?.content || '&nbsp;';
+                            myBubble.innerHTML = chatHistory.filter(m => m.sender === '我').slice(-1)[0]?.content || '&nbsp;';
+                            playModeIcon.className = isRandomMode ? 'fas fa-random' : 'fas fa-repeat';
+
+                            saveAllData();
+                            alert('导入成功！');
+                        } catch (err) {
+                            console.error(err);
+                            alert('导入失败，文件格式错误。');
+                        }
+                    };
+                    input.click();
+                });
+
+                overlay.onclick = (e) => { if (e.target === overlay) overlay.style.display = 'none'; };
+            }
+
+            // ---------- 语料库设置 ----------
+            function showCorpusSettings() {
+                overlay.innerHTML = '';
+                const card = document.createElement('div');
+                card.className = 'sub-settings-card';
+                card.innerHTML = `
+                    <span class="back-btn" id="backFromCorpus">‹ 返回</span>
+                    <h3>🗣 回复库</h3>
+                    <div id="replyCorpusTableArea"></div>
+                    <div style="margin:20px 0;">
+                        <div style="display:flex; gap:8px;">
+                            <input type="text" id="newReplyWord" placeholder="添加回复" style="flex:1; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); border:none; border-radius:50px; padding:12px; color:#eee;">
+                            <button id="addReplyBtn" style="background:rgba(80,80,80,0.5); backdrop-filter:blur(4px); border:none; border-radius:50px; padding:0 22px; color:white;">+</button>
+                        </div>
+                    </div>
+                    <h3 style="margin-top:12px;">🎴 状态库</h3>
+                    <div id="statusCorpusTableArea"></div>
+                    <div style="margin:20px 0;">
+                        <div style="display:flex; gap:8px;">
+                            <input type="text" id="newStatusWord" placeholder="添加状态" style="flex:1; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); border:none; border-radius:50px; padding:12px; color:#eee;">
+                            <button id="addStatusBtn" style="background:rgba(80,80,80,0.5); backdrop-filter:blur(4px); border:none; border-radius:50px; padding:0 22px; color:white;">+</button>
+                        </div>
+                    </div>
+                `;
+                overlay.appendChild(card);
+                overlay.style.display = 'flex';
+                document.getElementById('backFromCorpus').addEventListener('click', function() {
+                    overlay.innerHTML = '';
+                    document.getElementById('dataSub').click();
+                });
+
+                function renderReplyTable() {
+                    const start = (replyPage-1)*pageSize;
+                    const paginated = replyCorpus.slice(start, start+pageSize);
+                    let html = '<table class="corpus-table">';
+                    paginated.forEach((text, idx) => {
+                        html += `<tr><td>${text}</td><td class="remove-cell" onclick="removeReplyItem(${start+idx})">✕</td></tr>`;
+                    });
+                    html += '</table><div class="pagination">';
+                    if (replyPage > 1) html += `<span onclick="changeReplyPage(${replyPage-1})">上一页</span>`;
+                    html += `<span>第 ${replyPage} 页</span>`;
+                    if (start+pageSize < replyCorpus.length) html += `<span onclick="changeReplyPage(${replyPage+1})">下一页</span>`;
+                    html += '</div>';
+                    document.getElementById('replyCorpusTableArea').innerHTML = html;
+                }
+                function renderStatusTable() {
+                    const start = (statusPage-1)*pageSize;
+                    const paginated = statusCorpus.slice(start, start+pageSize);
+                    let html = '<table class="corpus-table">';
+                    paginated.forEach((text, idx) => {
+                        html += `<tr><td>${text}</td><td class="remove-cell" onclick="removeStatusItem(${start+idx})">✕</td></tr>`;
+                    });
+                    html += '</table><div class="pagination">';
+                    if (statusPage > 1) html += `<span onclick="changeStatusPage(${statusPage-1})">上一页</span>`;
+                    html += `<span>第 ${statusPage} 页</span>`;
+                    if (start+pageSize < statusCorpus.length) html += `<span onclick="changeStatusPage(${statusPage+1})">下一页</span>`;
+                    html += '</div>';
+                    document.getElementById('statusCorpusTableArea').innerHTML = html;
+                }
+
+                window.changeReplyPage = (p) => { replyPage = p; renderReplyTable(); };
+                window.changeStatusPage = (p) => { statusPage = p; renderStatusTable(); };
+                window.removeReplyItem = (idx) => { if (idx>=0 && idx<replyCorpus.length) { replyCorpus.splice(idx,1); renderReplyTable(); saveAllData(); } };
+                window.removeStatusItem = (idx) => { if (idx>=0 && idx<statusCorpus.length) { statusCorpus.splice(idx,1); renderStatusTable(); saveAllData(); } };
+
+                renderReplyTable();
+                renderStatusTable();
+
+                document.getElementById('addReplyBtn').addEventListener('click', function() {
+                    const inp = document.getElementById('newReplyWord');
+                    if (inp.value.trim()) { replyCorpus.push(inp.value.trim()); inp.value = ''; renderReplyTable(); saveAllData(); }
+                });
+                document.getElementById('addStatusBtn').addEventListener('click', function() {
+                    const inp = document.getElementById('newStatusWord');
+                    if (inp.value.trim()) { statusCorpus.push(inp.value.trim()); inp.value = ''; renderStatusTable(); saveAllData(); }
+                });
+                overlay.onclick = (e) => { if (e.target === overlay) overlay.style.display = 'none'; };
+            }
+
+            // ---------- 播放列表 ----------
+            document.getElementById('playlistIcon').addEventListener('click', function() {
+                overlay.innerHTML = '';
+                overlay.style.background = 'rgba(0,0,0,0.6)';
+                const card = document.createElement('div');
+                card.className = 'sub-settings-card';
+                card.innerHTML = `
+                    <h3 style="margin-bottom:16px; color:#ddd;">播放列表</h3>
+                    <div id="playlistItems"></div>
+                    <div class="import-section">
+                        <div class="import-row">
+                            <input type="text" id="localFileInput" placeholder="选择本地音乐文件" readonly onclick="document.getElementById('localFilePicker').click();">
+                            <button id="importLocalBtn">浏览</button>
+                            <input type="file" id="localFilePicker" accept="audio/*" style="display:none;">
+                        </div>
+                        <div class="import-row">
+                            <input type="text" id="urlInput" placeholder="输入音乐URL">
+                            <button id="importUrlBtn">导入URL</button>
+                        </div>
+                    </div>
+                `;
+                overlay.appendChild(card);
+                overlay.style.display = 'flex';
+
+                function renderPlaylist() {
+                    const listDiv = document.getElementById('playlistItems');
+                    if (!listDiv) return;
+                    listDiv.innerHTML = '';
+                    playlist.forEach((track, index) => {
+                        const item = document.createElement('div');
+                        item.className = 'playlist-item';
+                        item.innerHTML = `
+                            <span onclick="window.playTrack(${index})">${track.title}</span>
+                            <i class="fas fa-trash delete-song" onclick="window.deleteTrack(${index})"></i>
+                        `;
+                        listDiv.appendChild(item);
+                    });
+                }
+
+                renderPlaylist();
+
+                document.getElementById('importLocalBtn').addEventListener('click', function() {
+                    document.getElementById('localFilePicker').click();
+                });
+                document.getElementById('localFilePicker').addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const url = URL.createObjectURL(file);
+                        let title = file.name.replace(/\.[^/.]+$/, "");
+                        const newName = prompt('输入歌曲名称', title);
+                        if (newName) title = newName;
+                        playlist.push({ title, audioUrl: url });
+                        renderPlaylist();
+                        saveAllData();
+                    }
+                });
+                document.getElementById('importUrlBtn').addEventListener('click', function() {
+                    const url = document.getElementById('urlInput').value.trim();
+                    if (!url) { alert('请输入URL'); return; }
+                    const defaultName = url.split('/').pop() || '未知歌曲';
+                    const title = prompt('输入歌曲名称', defaultName);
+                    if (title) {
+                        playlist.push({ title, audioUrl: url });
+                        renderPlaylist();
+                        document.getElementById('urlInput').value = '';
+                        saveAllData();
+                    }
+                });
+
+                window.renderPlaylist = renderPlaylist;
+                overlay.onclick = (e) => { if (e.target === overlay) overlay.style.display = 'none'; };
+            });
+
+            window.deleteTrack = function(index) {
+                playlist.splice(index, 1);
+                if (window.renderPlaylist) window.renderPlaylist();
+                if (playlist.length > 0) {
+                    if (currentTrackIndex >= playlist.length) currentTrackIndex = 0;
+                    window.playTrack(currentTrackIndex);
+                } else {
+                    musicTitle.innerText = '暂无歌曲';
+                    audioPlayer.src = '';
+                }
+                saveAllData();
+            };
+
+            // ---------- 播放控制 ----------
+            playPauseBtn.addEventListener('click', function() {
+                if (isPlaying) pauseCurrent(); else playCurrent();
+            });
+            playModeIcon.addEventListener('click', function() {
+                isRandomMode = !isRandomMode;
+                playModeIcon.className = isRandomMode ? 'fas fa-random' : 'fas fa-repeat';
+                saveAllData();
+            });
+            prevBtn.addEventListener('click', function() {
+                if (playlist.length === 0) return;
+                currentTrackIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length;
+                window.playTrack(currentTrackIndex);
+            });
+            nextBtn.addEventListener('click', function() {
+                if (playlist.length === 0) return;
+                if (isRandomMode) {
+                    let newIndex;
+                    do { newIndex = Math.floor(Math.random() * playlist.length); } 
+                    while (playlist.length > 1 && newIndex === currentTrackIndex);
+                    currentTrackIndex = newIndex;
+                } else {
+                    currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+                }
+                window.playTrack(currentTrackIndex);
+            });
+
+            // ---------- 初始化 ----------
+            (async function init() {
+                await loadAllData();
+                initAmbientBg();
+                renderChatHistoryFull();
+                opponentBubble.innerHTML = '&nbsp;';
+                myBubble.innerHTML = '&nbsp;';
+                if (playlist.length > 0 && playlist[0].audioUrl) {
+                    window.playTrack(0);
+                }
+                scheduleOpponentStatusUpdate();
+            })();
+        })();
+    </script>
+</body>
+</html>
