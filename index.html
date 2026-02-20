@@ -1324,6 +1324,82 @@ body {
         }
     }
 
+    // ======================= 新增：备份管理器 =======================
+    const BackupMgr = {
+        // 备份所有纯文本数据（去除图片字段）
+        backup: async () => {
+            try {
+                // 获取所有帖子（含图片）
+                const allPosts = await DBMgr.getAllPosts();
+                // 去除图片和背景图，只保留文字信息
+                const postsForBackup = allPosts.map(p => {
+                    const { images, image, postBg, ...rest } = p;
+                    return rest;
+                });
+
+                // 获取所有合集（并去除封面图片）
+                const allCols = await DBMgr.getAllCollections();
+                const colsForBackup = allCols.map(c => {
+                    const { cover, ...rest } = c;
+                    return rest;
+                });
+
+                const backupData = {
+                    posts: postsForBackup,
+                    collections: colsForBackup,
+                    timestamp: Date.now()
+                };
+
+                localStorage.setItem('full_backup', JSON.stringify(backupData));
+                console.log('备份成功');
+            } catch (e) {
+                console.warn('备份失败', e);
+            }
+        },
+
+        // 尝试从 localStorage 恢复数据（仅在 IndexedDB 为空时调用）
+        restoreIfNeeded: async () => {
+            const meta = await DBMgr.getAllPostMeta();
+            if (meta.length > 0) return; // 已有数据，不恢复
+
+            const backupStr = localStorage.getItem('full_backup');
+            if (!backupStr) return;
+
+            if (confirm('检测到本地备份，是否恢复之前的数据？（图片将无法恢复，文字内容可恢复）')) {
+                try {
+                    const backup = JSON.parse(backupStr);
+                    const { posts = [], collections = [] } = backup;
+
+                    // 恢复合集
+                    for (let col of collections) {
+                        // 给合集一个全新的 id，避免冲突（如果原本 id 已存在则覆盖）
+                        col.id = col.id || Date.now() + Math.random();
+                        await DBMgr.saveCollection(col);
+                    }
+
+                    // 恢复帖子（同样重新生成 id 或保留原 id）
+                    for (let post of posts) {
+                        post.id = post.id || Date.now() + Math.random();
+                        // 清除可能残留的图片字段
+                        post.images = [];
+                        post.image = null;
+                        post.postBg = null;
+                        await DBMgr.savePost(post);
+                    }
+
+                    alert('数据恢复成功！');
+                    // 刷新当前视图
+                    HomeRenderer.resetAndRender();
+                    HtmlHomeRenderer.render();
+                } catch (e) {
+                    console.error('恢复失败', e);
+                    alert('恢复失败，备份文件可能损坏');
+                }
+            }
+        }
+    };
+    // ======================= 备份管理器结束 =======================
+
     const DBMgr = {
         dbName: 'LofterArchiveDB', dbVersion: 4,
         db: null,
@@ -1366,6 +1442,17 @@ body {
                         cursor.continue();
                     } else { resolve(metaList); }
                 };
+            });
+        },
+        // 新增：获取所有完整帖子（含图片）
+        getAllPosts: async () => {
+            if(!DBMgr.db) await DBMgr.init();
+            return new Promise((resolve, reject) => {
+                const tx = DBMgr.db.transaction(['posts'], 'readonly');
+                const store = tx.objectStore('posts');
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = (e) => reject(e.target.error);
             });
         },
         getPostsByTag: async (tag) => {
@@ -1433,7 +1520,11 @@ body {
             return new Promise((resolve) => { 
                 const tx = DBMgr.db.transaction(['posts'], 'readwrite'); 
                 tx.objectStore('posts').put(post); 
-                tx.oncomplete = () => resolve(true); 
+                tx.oncomplete = () => {
+                    resolve(true);
+                    // 备份纯文本数据（异步执行，不阻塞主流程）
+                    setTimeout(() => BackupMgr.backup(), 10);
+                }; 
             }); 
         },
         deletePost: async (id) => { 
@@ -1455,7 +1546,11 @@ body {
             if(!DBMgr.db) await DBMgr.init(); 
             return new Promise((resolve) => { 
                 const request = DBMgr.db.transaction(['collections'], 'readwrite').objectStore('collections').put(col); 
-                request.onsuccess = () => resolve(true); 
+                request.onsuccess = () => {
+                    resolve(true);
+                    // 备份纯文本数据
+                    setTimeout(() => BackupMgr.backup(), 10);
+                }; 
             }); 
         },
         deleteCollection: async (id) => { 
@@ -1703,6 +1798,7 @@ body {
                 const tx = DBMgr.db.transaction(['posts', 'collections'], 'readwrite'); 
                 tx.objectStore('posts').clear(); 
                 tx.objectStore('collections').clear(); 
+                localStorage.removeItem('full_backup'); // 新增：同时删除备份
                 localStorage.clear(); 
                 location.reload(); 
             } 
@@ -3722,6 +3818,9 @@ function handleHtmlBack() {
 }
     window.addEventListener('DOMContentLoaded', async () => {
         await DBMgr.init();
+        // 初始化后尝试恢复备份（仅在数据为空时提示）
+        await BackupMgr.restoreIfNeeded();
+        
         if(localStorage.getItem('profile_bg')) document.getElementById('profileBg').style.backgroundImage = `url(${localStorage.getItem('profile_bg')})`;
         if(localStorage.getItem('profile_avatar')) document.getElementById('avatarImg').src = localStorage.getItem('profile_avatar');
         if(localStorage.getItem('profile_name')) document.getElementById('userName').innerText = localStorage.getItem('profile_name');
